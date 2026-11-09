@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>rmua_simulator_bridge</name><version>0.1.0</version>
+  <description>ROS 2 adapter for the RMUA ROS 1 binary simulator</description>
+  <maintainer email="ysy@example.com">ysy</maintainer><license>BSD-3-Clause</license>
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <exec_depend>rclpy</exec_depend><exec_depend>airsim_ros</exec_depend>
+  <exec_depend>sensor_msgs</exec_depend><exec_depend>geometry_msgs</exec_depend>
+  <exec_depend>rosidl_runtime_py</exec_depend><exec_depend>ament_index_python</exec_depend>
+  <exec_depend>python3-websocket</exec_depend><exec_depend>python3-yaml</exec_depend>
+  <exec_depend>launch_ros</exec_depend>
+  <export><build_type>ament_cmake</build_type></export>
+</package>

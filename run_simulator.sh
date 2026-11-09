@@ -1,4 +1,4 @@
-#!/bin/bash
-source /opt/ros/noetic/setup.bash
-roscore &
-./Build/LinuxNoEditor/RMUA.sh seed "$1"
+#!/usr/bin/env bash
+set -e
+export SIM_RENDER=1
+exec "$(dirname "${BASH_SOURCE[0]}")/run_simulator_offscreen.sh" "$@"

@@ -1,0 +1,6 @@
+cmake_minimum_required(VERSION 3.16)
+project(rmua_simulator_bridge)
+find_package(ament_cmake REQUIRED)
+install(PROGRAMS scripts/rmua_simulator_bridge.py DESTINATION lib/${PROJECT_NAME} RENAME rmua_simulator_bridge)
+install(DIRECTORY config launch DESTINATION share/${PROJECT_NAME})
+ament_package()

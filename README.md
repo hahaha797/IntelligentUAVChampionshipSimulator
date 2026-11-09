@@ -1,153 +1,131 @@
-# __自主无人机竞速模拟器使用说明__  
-## 简介
-    RMUA2026赛季模拟器
+# RMUA2026 — ROS 2 Humble 适配（ysy）
 
-## 官方测试环境
-> ros-noetic  
-> ubuntu20.04  
-> NVIDIA RTX3090TI gpu   
-> INTEL I7 12th cpu  
-### 注意：若使用神经网络，建议使用双显卡以保证模拟器性能
+宿主机：Ubuntu 22.04 / ROS 2 Humble。原版资料见 [README_ROS1.md](README_ROS1.md)。
 
-## 使用说明
-## 1. 安装Nvidia-Docker  
->确保已安装 Nvidia 驱动  
-----
->安装docker
->+ `sudo apt-get install ca-certificates gnupg lsb-release`
->+ `sudo mkdir -p /etc/apt/keyrings`
->+ `curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg`
->+ `echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null`
->+ `sudo apt-get update`
->+ `sudo apt-get install docker-ce docker-ce-cli containerd.io docker-compose-plugin`
-----
->安装nvidia-container-toolkit
->+ `distribution=$(. /etc/os-release;echo $ID$VERSION_ID)`
->+ `curl -s -L https://nvidia.github.io/nvidia-docker/gpgkey | sudo apt-key add -`
->+ `curl -s -L https://nvidia.github.io/nvidia-docker/$distribution/nvidia-docker.list | sudo tee /etc/apt/sources.list.d/nvidia-docker.list`
->+ `sudo apt-get update && sudo apt-get install -y nvidia-container-toolkit`
->+ `sudo systemctl restart docker`
----
->设置用户组，消除 *sudo* 限制  
->+ `sudo groupadd docker`  
->+ `sudo gpasswd -a $USER docker`  
->+ 注销账户并重新登录使新的用户组生效
->+ sudo service docker restart
-## 2. 安装ROS-Noetic 
->+ `sudo sh -c 'echo "deb http://packages.ros.org/ros/ubuntu $(lsb_release -sc) main" > /etc/apt/sources.list.d/ros-latest.list'`   
->+ `sudo apt install curl `  
->+ `curl -s https://raw.githubusercontent.com/ros/rosdistro/master/ros.asc | sudo apt-key add -`   
->+ `sudo apt update`
->+ `sudo apt install ros-noetic-desktop-full`
->+ `sudo apt install python3-catkin-tools`
+**这个仓库没有 Unreal/AirSim 引擎源码。** 官方下载的是 ROS 1 Noetic 二进制，因此这里采用：
 
-## 3. 使用模拟器
-### 本机启动 
->+ `cd /path/to/IntelligentUAVChampionshipSimulator`  
->+ 模拟器：`wget https://sz-rm-rmua-dispatch-prod.oss-cn-shenzhen.aliyuncs.com/b39a0194e982f0d987153c6016feb325/simulator_12.0.0.5.zip`  
->+ `unzip simulator_12.0.0.5.zip`   
->+ 将此GitHub工程的所有文件下载到模拟器解压后的build文件夹同级目录中（注：不是放入build文件夹中） 
->+ 渲染模式  `./run_simulator.sh 123`  
->+ 后台模式  `./run_simulator_offscreen.sh 123`     
-注意：123 为随机种子参数，不同的种子对应不同的配置   
-![pic](./docs/渲染模式.png) 
->+ 使用ros查看主题  
->+ `source /opt/ros/noetic/setup.bash`    
->+ `rostopic list`    
+```text
+Humble 开发节点 ⇄ ROS 2 rmua_simulator_bridge ⇄ localhost WebSocket
+              ⇄ Noetic rosbridge ⇄ 官方 Unreal 模拟器
+```
 
-### Docker启动
->+ `cd /path/to/IntelligentUAVChampionshipSimulator` 
->+ `docker build -t simulator01 .`  
->+ `./run_docker_simulator.sh 123`  
-注意：Docker仅支持后台模式运行,启动脚本后第一个参数 _123_ 是模拟器的随机种子，可根据需要修改     
->+ 使用ros查看主题    
->+ `source /opt/ros/noetic/setup.bash`     
->+ `rostopic list`    
+开发节点和接口已经迁移到原生 ROS 2；闭源引擎通过适配层连接。没有将引擎二进制伪称为原生 ROS 2。
+图像/点云通过 rosbridge JSON/base64 传输，带宽和延迟大于原生 DDS；高帧率多相机需实测性能。
 
-## ros数据交互  
->用于获取数据的可订阅的主题  
->+ 前视相机   
-`/airsim_node/drone_1/front_left/Scene`  
-`/airsim_node/drone_1/front_right/Scene`
->+ 后视相机  
-`/airsim_node/drone_1/back_left/Scene`  
-`/airsim_node/drone_1/back_right/Scene`  
->+ imu数据  
-`/airsim_node/drone_1/imu/imu`
->+ 雷达数据  
-`/airsim_node/drone_1/lidar`
->+ 无人机状态真值  
-`/airsim_node/drone_1/debug/pose_gt`  
->+ gps数据(含带误差姿态)  
-`/airsim_node/drone_1/gps`
->+ 风速计  
-`airsim_node/drone_1/debug/wind`
->+ 电机输入PWM信号(0:右前, 1:左后, 2:左前, 3:右后)  
-`/airsim_node/drone_1/debug/rotor_pwm`
->+ 起始位姿  
-`/airsim_node/initial_pose`  
->+ 终点位置  
-`/airsim_node/end_goal`
----- 
->用于发送指令的主题
->+ 速度控制(0:x轴速度, 1:y轴速度, 2:z轴速度, 3:角速度，4:加速度(上限为8m/s2),5:是否急停(1表示急停))  
-`/airsim_node/drone_1/vel_body_cmd`  
->+ PWM控制(0:右前, 1:左后, 2:左前, 3:右后)  
-`/airsim_node/drone_1/rotor_pwm_cmd`
-----
->可用服务
->+ 工厂巡检数据上报  
-index:(0 每条路径的中央枢纽前工厂； 1 每条路径的中央枢纽后工厂)  value:(仪表数值)  
-`/airsim_node/meter_report`  
+日常启动、停止、参数和故障处理见 [操作说明](docs/OPERATIONS.md)；首次系统配置见 [Base 环境说明](../IntelligentUAVChampionshipBase/docs/ENVIRONMENT.md)。
 
-## 系统相关参数
-> 无人机系统参数  
->+ 质量 0.9kg    
->+ 轴距（电机至机体中心）0.18米  
->+ 转动惯量 Ixx 0.0046890742, Iyy 0.0069312, Izz 0.010421166  
->+ 电机升力系数 0.000367717  
->+ 电机反扭力系数 4.888486266072161e-06  
->+ 最大转速 11079.03 转每分钟
-----
-> 标定板参数
->+ 行数（内点）8  
->+ 列数（内点）11  
->+ 方块边长 0.06 米  
+## 1. 构建 ROS 2 工作区
 
+将 Base 仓库与本仓库并排放置：
 
-## Q&A
+```text
+UAV/
+  IntelligentUAVChampionshipBase/
+  IntelligentUAVChampionshipSimulator/
+```
 
-### 速度控制描述
->1.速度控制仅提供基础飞控，保证静止无风时可悬停，但限制最高加速度，并且出现大幅速度变化时会出现姿态波动，如需要更稳定的飞控，建议使用pwm控制
+```bash
+export UAV_ROOT=/home/pk620/桌面/UAV  # 其他机器请修改此路径
+cd "$UAV_ROOT/IntelligentUAVChampionshipBase/basic_dev"
+./scripts/setup_venv.sh
+./build_ros2.sh
+source env_ros2.bash
+```
 
->2.此处的加速度是标量，表示x轴与y轴速度变成预期速度（速度控制中输入的数值）的快慢，最高为8m/s2，超过8的数值按8进行处理，
-示例：无人机初始速度为0，此时x轴速度输入为8，加速度输入为8，x轴速度会线性增加，1s后，x轴速度从0变为8m/s
+适配层依赖系统 Python 的 `websocket-client` 和 PyYAML：
 
->3.速度控制的第五个参数，表示是否需要急停，当输入为1时，会忽略所有输入，速度瞬间归零进入悬停状态，但飞机会有姿态变化，急停前速度越快，急停时姿态变化越大
+```bash
+sudo apt install python3-websocket python3-yaml
+```
 
-### 工厂巡检数据上报
->工厂巡检数据上报服务输入参数index的0表示每条路径的中央枢纽前工厂，1表示每条路径的中央枢纽后工厂
+项目 `.venv` 中安装 websocket-client；启动脚本会加载它。构建工具和依赖安装脚本见 Base README。
+构建产物位于 `$HOME/.cache/rmua2026-ros2`，避开中文路径的 Humble rosidl 问题。
 
->示例：8-12路径，在中央枢纽前进入工厂后，输入index为0进行上报，中央枢纽后无需进入工厂巡检上报；12-10路径，在中央枢纽前进入工厂后，输入index为0进行上报，在中央枢纽后进入工厂后，输入index为1进行上报；
+## 2. 构建引擎容器
 
-### 调试配置表
->在模拟器路径下的 _/Build/LinuxNoEditor/RMUA/Content/Configs/GameConfig.json_ 的json文件中有两个字段IgnoreAllHitCollision，IgnoreOverTime，第一个字段设置为true后，撞击不会导致比赛结束，第二个字段设置为true后，超时不会导致比赛结束。可酌情使用，便于调试。
+需要 Docker、NVIDIA 驱动及 NVIDIA Container Toolkit。宿主机不需要安装 Noetic。
 
-### 找不到数据类型
-> 开发速度控制ros通信所需的msg文件，可查阅VelCmdmsg文件夹
+```bash
+cd "$UAV_ROOT/IntelligentUAVChampionshipSimulator"
+./build_simulator.sh
+```
 
-> 使用rqt_topic时发现一些数据类型缺失，可参考source官方开发案例教程中basic_dev中的airsim_ros包。具体请参考: https://github.com/RoboMaster/IntelligentUAVChampionshipBase/tree/RMUA2026
+镜像固定使用 Ubuntu 20.04 Unreal runtime，安装 Noetic、rosbridge 及原始消息定义。
+构建脚本并行下载官方 `simulator_12.0.0.5.zip`、构建兼容运行环境，缓存位于
+`$HOME/.cache/rmua2026-assets`；引擎通过分段断点缓存下载，并校验 ZIP 全部条目的 CRC。
+可用 `SIMULATOR_URL=... ./build_simulator.sh` 指定同版本压缩包地址，`SIM_DOWNLOAD_WORKERS`
+调整下载并发数（默认 32），`SIM_ASSET_CACHE` 修改缓存路径。APT 依赖也进行并行预取，仍由
+APT 验证仓库签名、包哈希并安装。默认 HTTPS 中科大镜像，
+可用 `--build-arg UBUNTU_MIRROR=... --build-arg ROS1_MIRROR=...` 覆盖。
+构建脚本通过 BuildKit 传入宿主机 CA 证书以引导最小镜像的 HTTPS，保留 TLS 验证。
 
+## 3. 启动
 
-### 帧率波动
-> 当帧率波动严重时，可以更换更高性能的显卡。    
-也可以关闭不需要的相机降低模拟器性能需求，提升帧率稳定性。
-对于本机启动，仅需要把 _/path/to/IntelligentUAVChampionshipSimulator_ 中的 _settings.json_ 中相应相机配置删除即可关闭该相机。  
-对于docker启动，需要把 _/path/to/IntelligentUAVChampionshipSimulator_ 中的 _settings.json_ 中相应相机配置删除后重新构建镜像即可。   
-![pic](./docs/关闭相机.png)   
+```bash
+cd "$UAV_ROOT/IntelligentUAVChampionshipSimulator"
+export ROS_DOMAIN_ID=20  # 各终端保持一致
+# 以下启动方式二选一；123 为随机种子
+# 自动启动引擎容器和 ROS 2 适配层
+./run_simulator_offscreen.sh 123
+# 有窗口模式，需要可用的 DISPLAY/Xauthority
+./run_simulator.sh 123
+```
 
-### 时钟同步
-> 模拟器时钟与本地时钟存在一定差异，建议使用 IMU 主题传出的时间戳作为全局时钟进行程序设计。
+也可分开启动，便于调试：
 
+```bash
+./run_docker_simulator.sh 123
+# 另一个终端
+./run_ros2_bridge.sh
+# 再一个终端
+source ../IntelligentUAVChampionshipBase/basic_dev/env_ros2.bash
+ros2 topic list
+ros2 topic echo /airsim_node/drone_1/imu/imu --once --qos-reliability best_effort
+```
 
+已有远程或自建 ROS 1 rosbridge 端点时，可单独运行：
 
+```bash
+./run_ros2_bridge.sh url:=ws://127.0.0.1:9090
+```
+
+所有 ROS 2 进程保持相同 `ROS_DOMAIN_ID`。脚本沿用宿主机现有值，本机为 20；
+ROS 1 的 ROS_MASTER_URI/ROS_IP 不用于 ROS 2。适配层默认连接 `127.0.0.1:9090`。
+`SIM_IMAGE`、`SIM_CONTAINER_NAME`、`SIM_GPUS`、`ROSBRIDGE_PORT` 可通过环境变量覆盖；
+若更换端口，独立运行适配层时同时传入对应的 `url`。
+
+## 接口与配置
+
+`ros2/src/rmua_simulator_bridge/config/topics.yaml` 显式列出适配方向和类型：
+
+- ROS 1 → ROS 2：四路相机、IMU、GPS、点云、真值位姿、电机状态、初始位姿、终点。
+- ROS 2 → ROS 1：`/airsim_node/drone_1/vel_body_cmd` 和 `rotor_pwm_cmd`。
+- 服务：`drone_1/takeoff`、`drone_1/land`、`reset`、`meter_report`。
+
+初始位姿和终点使用 transient_local；时间戳保持模拟器值，不用主机接收时间覆盖，也不虚构 `/clock`。
+自定义字段和 ROS 1/2 时间字段由适配器转换；断线自动重连并恢复订阅，不重放旧飞行指令。
+服务超时/断线返回 `success=false` 并输出错误日志。
+
+2026 VelCmd 字段为 `header, vx, vy, vz, yaw_rate, va, stop`，详见 Base README。
+`VelCmdmsg/VelCmd.msg` 和 `ros1_interfaces` 保留官方 ROS 1 字段名用于二进制通信。
+
+`meter_report` 的接口已通过官方 12.0.0.5 引擎库中的服务 MD5 核对：请求为
+`int64 index, int64 value`，响应为 `bool success`，MD5 为
+`40e1aa17dd96ff6a8c88396581d6a491`。风速调试话题已在实际引擎中核对为 `geometry_msgs/Vector3Stamped`，当前未加入默认适配配置。
+其他已有服务类型也可按 YAML 配置加入适配，前提是引擎实际提供该服务。
+
+## 验证范围
+
+已在本机 Ubuntu 22.04 / Humble / RTX 4090 环境完成：
+
+- 七个 ROS 2 包构建，以及模拟 rosbridge 双向通信、服务、重连和原生节点的三项集成测试。
+- Docker、Compose、Buildx、NVIDIA Container Toolkit 安装及 GPU 容器检查。
+- 官方 12.0.0.5 引擎下载、ZIP 全条目 CRC 校验和完整仿真镜像构建。
+- 种子 123 的真实 1280×720 图形场景启动，ROS 2 接收到 960×720 前视图像、IMU 和初始位姿。
+- VelCmd、RotorPWM、Takeoff、Land、Reset、MeterReport 的 ROS 1 MD5 与官方引擎库一致，
+  容器构建时还会实际导入生成的 Python 接口并断言关键 MD5，防止接口包被忽略。
+
+尚未进行完整竞速飞行闭环、长时间性能或全部服务的实际调用测试。
+
+参考：[rosbridge 协议](https://github.com/RobotWebTools/rosbridge_suite/blob/ros1/ROSBRIDGE_PROTOCOL.md)、
+[Unreal runtime 镜像](https://github.com/adamrehn/ue4-runtime)。

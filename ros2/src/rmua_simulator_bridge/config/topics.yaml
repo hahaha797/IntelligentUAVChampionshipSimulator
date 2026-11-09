@@ -1,0 +1,39 @@
+telemetry:
+- topic: /airsim_node/drone_1/debug/pose_gt
+  type: geometry_msgs/msg/PoseStamped
+- topic: /airsim_node/drone_1/gps
+  type: geometry_msgs/msg/PoseStamped
+- topic: /airsim_node/drone_1/imu/imu
+  type: sensor_msgs/msg/Imu
+- topic: /airsim_node/drone_1/lidar
+  type: sensor_msgs/msg/PointCloud2
+- topic: /airsim_node/drone_1/debug/rotor_pwm
+  type: airsim_ros/msg/RotorPWM
+- topic: /airsim_node/initial_pose
+  type: geometry_msgs/msg/PoseStamped
+  retained: true
+- topic: /airsim_node/end_goal
+  type: geometry_msgs/msg/PoseStamped
+  retained: true
+- topic: /airsim_node/drone_1/front_left/Scene
+  type: sensor_msgs/msg/Image
+- topic: /airsim_node/drone_1/front_right/Scene
+  type: sensor_msgs/msg/Image
+- topic: /airsim_node/drone_1/back_left/Scene
+  type: sensor_msgs/msg/Image
+- topic: /airsim_node/drone_1/back_right/Scene
+  type: sensor_msgs/msg/Image
+commands:
+- topic: /airsim_node/drone_1/vel_body_cmd
+  type: airsim_ros/msg/VelCmd
+- topic: /airsim_node/drone_1/rotor_pwm_cmd
+  type: airsim_ros/msg/RotorPWM
+services:
+- name: /airsim_node/drone_1/takeoff
+  type: airsim_ros/srv/Takeoff
+- name: /airsim_node/drone_1/land
+  type: airsim_ros/srv/Land
+- name: /airsim_node/reset
+  type: airsim_ros/srv/Reset
+- name: /airsim_node/meter_report
+  type: airsim_ros/srv/MeterReport
